@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://fiches-pedagogiques-elromani.netlify.app/sitemap.xml

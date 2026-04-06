@@ -1,0 +1,23 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+.ql-editor {
+  min-height: 200px;
+}
+.dark .ql-toolbar {
+  background-color: #1f2937;
+  border-color: #374151;
+}
+.dark .ql-stroke {
+  stroke: #e5e7eb;
+}
+.dark .ql-fill {
+  fill: #e5e7eb;
+}
+.dark .ql-picker {
+  color: #e5e7eb;
+}
+.dark .ql-editor {
+  background-color: #1f2937;
+  color: #e5e7eb;
+}
