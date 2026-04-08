@@ -1,4 +1,3 @@
-// src/components/QuestionChoice.jsx
 import { motion } from "framer-motion";
 
 export default function QuestionChoice({

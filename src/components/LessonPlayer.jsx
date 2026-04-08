@@ -7,6 +7,8 @@ import QuestionImage from "./QuestionImage";
 import ShareLesson from "./ShareLesson";
 import Footer from "./Footer";
 import CourseModal from "./CourseModal";
+import QuestionChoice from "./QuestionChoice";
+
 export default function LessonPlayer({
   lesson,
   answers,
@@ -148,6 +150,7 @@ const [showCourse, setShowCourse] = useState(false);
                    language={lesson.language}
                    />
                    )}
+				   
                   </motion.div>
                 );
               })}

@@ -1,13 +1,11 @@
 // src/components/AdminPanel.jsx
 import { useState, useEffect } from 'react';
-import { loadLessons, addLesson, updateLesson, deleteLesson } from '../data/lessonStorage';
+import { loadLessons, addLesson, updateLesson, deleteLesson } from '../data/lessonStorageFirestore'; // ou lessonStorage selon votre config
 import { colors } from '../constants/colors';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Image from '@tiptap/extension-image';
 import Youtube from '@tiptap/extension-youtube';
-
-
 
 export default function AdminPanel({ onClose }) {
   const [lessons, setLessons] = useState([]);
@@ -20,69 +18,67 @@ export default function AdminPanel({ onClose }) {
     level: 'CP',
     subject: '',
     language: 'fr',
-    course: '',          // ← CHAMP COURS AJOUTÉ
+    course: '',
     questions: []
   });
+
+  // Initialisation de l'éditeur TipTap pour le champ "cours"
   const editor = useEditor({
-  extensions: [StarterKit, Image, Youtube],
-  content: formData.course || '',
-  onUpdate: ({ editor }) => {
-    setFormData(prev => ({ ...prev, course: editor.getHTML() }));
-  },
-});
-useEffect(() => {
-  if (editor && editingLesson) {
-    editor.commands.setContent(editingLesson.course || '');
-  }
-}, [editingLesson, editor]);
+    extensions: [StarterKit, Image, Youtube],
+    content: formData.course || '',
+    onUpdate: ({ editor }) => {
+      setFormData(prev => ({ ...prev, course: editor.getHTML() }));
+    },
+  });
 
   useEffect(() => {
-    setLessons(loadLessons());
+    loadLessons().then(setLessons);
   }, []);
 
-  const handleSave = () => {
-  if (!formData.title.trim()) { alert("Le titre est obligatoire."); return; }
-  if (!formData.content.trim()) { alert("Le contenu est obligatoire."); return; }
-  for (let i = 0; i < formData.questions.length; i++) {
-    const q = formData.questions[i];
-    if (!q.text.trim()) { alert(`La question ${i+1} n'a pas de texte.`); return; }
-    if (q.type === 'choice' && (!q.options || q.options.length === 0)) {
-      alert(`La question ${i+1} est de type QCM texte mais n'a pas d'options.`);
-      return;
+  const handleSave = async () => {
+    // Validations minimales
+    if (!formData.title.trim()) { alert("Le titre est obligatoire."); return; }
+    if (!formData.content.trim()) { alert("Le contenu est obligatoire."); return; }
+    for (let i = 0; i < formData.questions.length; i++) {
+      const q = formData.questions[i];
+      if (!q.text.trim()) { alert(`La question ${i+1} n'a pas de texte.`); return; }
+      if (q.type === 'choice' && (!q.options || q.options.length === 0)) {
+        alert(`La question ${i+1} est de type QCM texte mais n'a pas d'options.`);
+        return;
+      }
+      if (q.type === 'image' && (!q.options || q.options.length === 0)) {
+        alert(`La question ${i+1} est de type QCM image mais n'a pas d'options.`);
+        return;
+      }
+      if (!q.answers || q.answers.length === 0) {
+        alert(`La question ${i+1} n'a pas de réponses attendues.`);
+        return;
+      }
     }
-    if (q.type === 'image' && (!q.options || q.options.length === 0)) {
-      alert(`La question ${i+1} est de type QCM image mais n'a pas d'options.`);
-      return;
+    const dataToSave = {
+      ...formData,
+      subject: formData.subject.trim() || "Général",
+      level: formData.level.trim() || "CP",
+      language: formData.language || "fr",
+      course: formData.course || '',
+      questions: formData.questions.map(q => ({
+        ...q,
+        text: q.text.trim(),
+        answers: (q.answers || []).filter(a => a.trim() !== ""),
+        options: q.type === 'choice'
+          ? (q.options || []).filter(opt => typeof opt === 'string' ? opt.trim() !== "" : (opt?.text || "").trim() !== "")
+          : (q.options || []).filter(opt => opt && opt.text && opt.text.trim() !== "" && opt.img && opt.img.trim() !== "")
+      }))
+    };
+    if (editingLesson) {
+      const updated = await updateLesson(editingLesson.id, dataToSave);
+      setLessons(updated);
+    } else {
+      const updated = await addLesson(dataToSave);
+      setLessons(updated);
     }
-    if (!q.answers || q.answers.length === 0) {
-      alert(`La question ${i+1} n'a pas de réponses attendues.`);
-      return;
-    }
-  }
-  const dataToSave = {
-    ...formData,
-    subject: formData.subject.trim() || "Général",
-    level: formData.level.trim() || "CP",
-    language: formData.language || "fr",
-    course: formData.course || '',
-    questions: formData.questions.map(q => ({
-      ...q,
-      text: q.text.trim(),
-      answers: (q.answers || []).filter(a => a.trim() !== ""),
-      options: q.type === 'choice'
-        ? (q.options || []).filter(opt => typeof opt === 'string' ? opt.trim() !== "" : (opt?.text || "").trim() !== "")
-        : (q.options || []).filter(opt => opt && opt.text && opt.text.trim() !== "" && opt.img && opt.img.trim() !== "")
-    }))
+    resetForm();
   };
-  if (editingLesson) {
-    const updated = updateLesson(editingLesson.id, dataToSave);
-    setLessons(updated);
-  } else {
-    const updated = addLesson(dataToSave);
-    setLessons(updated);
-  }
-  resetForm();
-};
 
   const resetForm = () => {
     setEditingLesson(null);
@@ -94,74 +90,73 @@ useEffect(() => {
       level: 'CP',
       subject: '',
       language: 'fr',
-      course: '',        // ← RÉINITIALISATION DU COURS
+      course: '',
       questions: []
     });
+    editor?.commands.setContent('');
   };
 
   const handleEdit = (lesson) => {
     setEditingLesson(lesson);
     setFormData(lesson);
+    editor?.commands.setContent(lesson.course || '');
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (window.confirm('Supprimer cette leçon ?')) {
-      const updated = deleteLesson(id);
+      const updated = await deleteLesson(id);
       setLessons(updated);
       if (editingLesson?.id === id) resetForm();
     }
   };
 
+  // Gestion des questions
   const addQuestion = () => {
     setFormData({
       ...formData,
       questions: [...formData.questions, { text: '', type: 'text', answers: [], options: [] }]
     });
   };
-
   const updateQuestion = (idx, field, value) => {
     const newQuestions = [...formData.questions];
     newQuestions[idx][field] = value;
     setFormData({ ...formData, questions: newQuestions });
   };
-
   const removeQuestion = (idx) => {
     const newQuestions = formData.questions.filter((_, i) => i !== idx);
     setFormData({ ...formData, questions: newQuestions });
   };
 
+  // Gestion des options pour QCM texte
   const addTextOption = (qIdx) => {
     const newQuestions = [...formData.questions];
     if (!newQuestions[qIdx].options) newQuestions[qIdx].options = [];
     newQuestions[qIdx].options.push('');
     setFormData({ ...formData, questions: newQuestions });
   };
-
   const updateTextOption = (qIdx, optIdx, value) => {
     const newQuestions = [...formData.questions];
     newQuestions[qIdx].options[optIdx] = value;
     setFormData({ ...formData, questions: newQuestions });
   };
-
   const removeTextOption = (qIdx, optIdx) => {
     const newQuestions = [...formData.questions];
     newQuestions[qIdx].options = newQuestions[qIdx].options.filter((_, i) => i !== optIdx);
     setFormData({ ...formData, questions: newQuestions });
   };
 
+  // Gestion des options pour QCM image
   const addImageOption = (qIdx) => {
     const newQuestions = [...formData.questions];
     if (!newQuestions[qIdx].options) newQuestions[qIdx].options = [];
     newQuestions[qIdx].options.push({ text: '', img: '' });
     setFormData({ ...formData, questions: newQuestions });
   };
-
   const updateImageOption = (qIdx, optIdx, field, value) => {
     const newQuestions = [...formData.questions];
     newQuestions[qIdx].options[optIdx][field] = value;
     setFormData({ ...formData, questions: newQuestions });
   };
-
   const removeImageOption = (qIdx, optIdx) => {
     const newQuestions = [...formData.questions];
     newQuestions[qIdx].options = newQuestions[qIdx].options.filter((_, i) => i !== optIdx);
@@ -192,16 +187,15 @@ useEffect(() => {
             </ul>
           </div>
 
-          {/* Formulaire */}
+          {/* Formulaire d'ajout / modification */}
           <div>
             <h3 className="text-xl font-semibold mb-2">{editingLesson ? 'Modifier' : 'Ajouter'} une leçon</h3>
             <div className="space-y-3">
               <input type="text" placeholder="Titre" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} className="w-full p-2 border rounded dark:bg-gray-700" />
               <textarea placeholder="Contenu" value={formData.content} onChange={e => setFormData({...formData, content: e.target.value})} className="w-full p-2 border rounded dark:bg-gray-700" rows="3" />
               <input type="text" placeholder="Image URL" value={formData.image} onChange={e => setFormData({...formData, image: e.target.value})} className="w-full p-2 border rounded dark:bg-gray-700" />
-			  
-  <label className="block font-semibold mt-2">Contenu du cours (éditeur riche)</label>
-<EditorContent editor={editor} className="border rounded p-2 min-h-[200px] bg-white dark:bg-gray-700" />
+              <label className="block font-semibold">Cours (éditeur riche)</label>
+              <EditorContent editor={editor} className="border rounded p-2 min-h-[200px] bg-white dark:bg-gray-700" />
               <select value={formData.color} onChange={e => setFormData({...formData, color: e.target.value})} className="w-full p-2 border rounded dark:bg-gray-700">
                 {Object.keys(colors).map(c => <option key={c} value={c}>{c}</option>)}
               </select>
