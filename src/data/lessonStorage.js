@@ -12,6 +12,8 @@ export const loadLessons = () => {
   return defaultLessons;
 };
 
+
+
 export const saveLessons = (lessons) => {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(lessons));
 };
@@ -54,4 +56,45 @@ export const deleteLesson = (lessonId) => {
   const filtered = lessons.filter(l => l.id !== lessonId);
   saveLessons(filtered);
   return filtered;
+};
+
+
+
+// Export
+export const exportAllData = () => {
+  const lessons = loadLessons();
+  const dataStr = JSON.stringify(lessons, null, 2);
+  const blob = new Blob([dataStr], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `lecons_${new Date().toISOString().slice(0,19)}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+};
+
+
+
+// Import
+export const importAllData = (jsonFile) => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const importedLessons = JSON.parse(event.target.result);
+        if (Array.isArray(importedLessons)) {
+          saveLessons(importedLessons);
+          resolve(importedLessons);
+        } else {
+          reject(new Error('Le fichier doit contenir un tableau de leçons.'));
+        }
+      } catch (err) {
+        reject(err);
+      }
+    };
+    reader.onerror = () => reject(new Error('Erreur de lecture'));
+    reader.readAsText(jsonFile);
+  });
 };
