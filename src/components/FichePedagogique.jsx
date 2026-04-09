@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { loadLessons } from "../data/lessonStorageFirestore"; // à adapter si vous restez sur localStorage
+//import { loadLessons } from "../data/lessonStorageFirestore"; // à adapter si vous restez sur localStorage
+import { loadLessons } from '../data/lessonStorage';
 import { useProfile } from "../context/ProfileContext";
 import { normalize, containsWord } from "../utils/normalize";
 import LessonList from "./LessonList";
@@ -16,13 +17,11 @@ export default function FichePedagogique() {
   const [incorrectIndices, setIncorrectIndices] = useState([]);
   const [originalAnswers, setOriginalAnswers] = useState([]);
 
-  // Chargement des leçons
   useEffect(() => {
-    loadLessons().then(data => {
-      setLessons(data);
-      setLoading(false);
-    });
-  }, []);
+  const lessonsData = loadLessons();
+  setLessons(lessonsData);
+  setLoading(false);
+}, []);
 
   const startLesson = (lesson) => {
     setSelectedLesson(lesson);
