@@ -17,9 +17,9 @@ export default function FichePedagogique() {
   const [incorrectIndices, setIncorrectIndices] = useState([]);
   const [originalAnswers, setOriginalAnswers] = useState([]);
 
-  useEffect(() => {
-  const lessonsData = loadLessons();
-  setLessons(lessonsData);
+ useEffect(() => {
+  const data = loadLessons();
+  setLessons(data);
   setLoading(false);
 }, []);
 
