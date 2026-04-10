@@ -53,5 +53,33 @@ export const lessons = [
         answers: ["printemps"]
       }
     ]
+  },
+  {
+    id: 3,
+    title:  "📘 Informatique",
+     image: "/images/informatique.png",
+    color: "blue",
+    content: "Dans cette leçon, nous allons découvrir les bases de la programmation : variables, conditions, boucles.",
+    level: "CP",
+    subject: "découverte du monde",
+    language: "fr",
+    questions: [
+      {
+        text: "Combien y a-t-il de saisons ?",
+        type: "text",
+        answers: ["4", "quatre"]
+      },
+      {
+        text: "Quelle est la saison actuelle ?",
+        type: "image",
+        options: [
+          { text: "hiver", img: "/images/hiver.png" },
+          { text: "printemps", img: "/images/printemps.png" },
+          { text: "été", img: "/images/ete.png" },
+          { text: "automne", img: "/images/automne.png" }
+        ],
+        answers: ["printemps"]
+      }
+    ]
   }
 ];
